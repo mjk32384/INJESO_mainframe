@@ -1,12 +1,14 @@
 /*
- * mainframev2.1.1.c
+ * mainframev2.1.2.c
  *
- * Created: 2023-09-08 오후 8:27:17
+ * Created: 2023-09-14 오후 3:26:35
+
  * Author : 정우진 wj Jeong
  */ 
 //---------------------------------------------------
 // MPU9250 센서의 방향이 다른 점 유의하세요. 
-
+// PD 제어 추가
+// 모터 포화 문제 해결을 위한 튜닝 진행중
 
 //---------------------------------------------------
 
@@ -33,12 +35,12 @@ float gyrozz = 0;
 float gyrosumxx=0;
 float gyrosumyy=0;
 float gyrosumzz=0;
-//float avgxx = 0.02525;//1번
-//float avgyy = -0.06337;
-//float avgzz = -0.00780;
-float avgxx = -0.01707;//2번
-float avgyy = -0.00570;
-float avgzz = -0.00997;
+float avgxx = 0.02525;//1번
+float avgyy = -0.06337;
+float avgzz = -0.00780;
+//float avgxx = -0.01707;//2번
+//float avgyy = -0.00570;
+//float avgzz = -0.00997;
 float yaw = 0;
 float pitch = 0;
 float roll = 0;
@@ -58,9 +60,9 @@ float avgaz = -1.8743;
 float magxx = 0;
 float magyy = 0;
 float magzz = 0;
-float avgmx = 0;
-float avgmy = 0;
-float avgmz = 0;
+float avgmx = 60;
+float avgmy = 70;
+float avgmz = 150;
 float magsumx =0;
 float magsumy =0;
 float magsumz =0;
@@ -104,7 +106,12 @@ double orient_z[3];
 uint16_t v0 = 0;
 uint16_t v1 = 0;
 uint16_t v2 = 0;
+
+float ErrorSum=0;
+float factor = 0;
 int k = 0;
+int OCR2_now=0;
+int OCR2_gap=0;
 
 ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 {
@@ -130,7 +137,7 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	f_gy_last=f_gy_now;
 	f_gz_last=f_gz_now;
 	
-	//orient not change	
+	//orient notchange	
 	accelxx = acc2_f[0]-avgax;
 	accelyy = acc2_f[1]-avgay;
 	accelzz = acc2_f[2]-avgaz;	
@@ -159,15 +166,26 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	Quaternion_set(cos(roll1/2.0), 0, 0, sin(roll1/2.0), &q2);
 	Quaternion_multiply(&q2, &q1, &orientation2);
 	Quaternion_normalize(&orientation2, &orientation2);
-	if(n_enter>=25){
+	
+
+	if(n_enter>=10){
 			
 
-		v0 = f_gz_last * 10000;
-		v1 = orientation.v[1] * 10000;
-		v2 = orientation.v[2] * 10000;
-		
-		
-		if(k<250)
+		v0 = f_gz_last * 1000;
+		v2 = OCR2;
+		if(f_gz_now>0.2||f_gz_now<-0.2)
+		{	
+			
+		    //ErrorSum += f_gz_now;
+		    OCR2_gap = (int) (f_gz_now / 0.0124 * 0.15 + 0.02 * OCR2_gap);
+			OCR2_now = OCR2 + OCR2_gap;
+		    if(OCR2_now<250&&OCR2_now>95)
+			{
+				OCR2 = (unsigned char)(OCR2_now);
+			}
+		}		
+		v1 = OCR2_gap;
+		if(k<500)
 		{
 		UART1_transmit('\t');
 		UART1_print16b((uint16_t) (orientation.w * 10000));
@@ -190,20 +208,7 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	    _delay_ms(10);
 		Quaternion_toEulerZYX2(&orientation2,eulang);
 		
-		
-		UART1_print16b((uint16_t) (f_ax_now*10000));
- 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (f_ay_now*10000));
- 		UART1_transmit('\t');		
-		UART1_print16b((uint16_t) (f_az_now*10000));
- 		UART1_transmit('\t');		
-		UART1_print16b((uint16_t) magxx);
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) magyy);
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) magzz);
-		UART1_transmit('\t');	
-		UART1_transmit('\n');			 
+			 
 /*
  		if(eulang[1]<0.1) UART1_print16b(0);
  		else UART1_print16b((uint16_t) (eulang[0] * 180/3.141592));
@@ -219,13 +224,16 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
     	UART1_print16b((uint16_t) (roll));					
 		UART1_transmit('\n');
 */
-		OCR2 += f_gz_now * 100;
-
 		n_enter=0;
+		
+
+
 
 	}
-}
 
+	
+	 
+}
 ISR(TIMER2_OVF_vect) 
 {
 	TCNT2 = 6;
@@ -246,7 +254,7 @@ int main(void)
 	TCNT2 = 6;					        // 타이머 초기 값 설정
 	
 	TCCR2 = 0x68;				        // 표준모드, 타이머 정지
-	OCR2 = 00;
+	OCR2 = 100;
 	DDRB |= (1<<DDB7);// 인터럽트 설정
 	TIMSK = (1<<TOIE0); 	// 타이머0 오버플로 인터럽트 허용
 	TCCR0 |= 0x07;
@@ -298,17 +306,25 @@ int main(void)
 	_delay_ms(1000);
 	Quaternion_setIdentity(&orientation); 
 	sei();							    // 전역 인터럽트 허용
+	_delay_ms(30);
+	OCR2 = 130;
+	OCR2_now=130;
 
-	UART1_transmit('\n');
 	_delay_ms(400);	
 	
-	//for(int j = 0 ; j<25 ; j++){
-		//OCR2 = 10*j + 10;
-		//_delay_ms(1000);
-		//
-	//}
-	OCR2 = 100;
+/*
+	for(int j = 0 ; j<11 ; j++){
+		OCR2 = 20*j + 50;
+		_delay_ms(1000);
+		
+	}*/
+	
 	_delay_ms(10000);
+	while(1)
+	{
+		_delay_ms(1);
+	}
 }
+
 
 
