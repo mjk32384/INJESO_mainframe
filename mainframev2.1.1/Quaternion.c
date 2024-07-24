@@ -170,7 +170,6 @@ void Quaternion_toEulerZYX2(Quaternion* q, double output[3])
 	double sinp = sqrt(q->v[1] * q->v[1] + q->v[0] * q->v[0]);
 	output[1] = 2*atan2(sinp,cosp);
 }
-
 void Quaternion_conjugate(Quaternion* q, Quaternion* output)
 {
     assert(output != NULL);
@@ -286,6 +285,18 @@ void Quaternion_slerp(Quaternion* q1, Quaternion* q2, double t, Quaternion* outp
         result.v[1] = (q1->v[1] * ratioA + q2->v[1] * ratioB);
         result.v[2] = (q1->v[2] * ratioA + q2->v[2] * ratioB);
     }
+    *output = result;
+}
+
+void Quaternion_lerp(Quaternion* q1, Quaternion* q2, double t, Quaternion* output)
+{
+    Quaternion result;
+
+    result.w = (1 - t) * q1->w + t * q2->w;
+    result.v[0] = (1 - t) * q1->v[0] + t * q2->v[0];
+    result.v[1] = (1 - t) * q1->v[1] + t * q2->v[1];
+    result.v[2] = (1 - t) * q1->v[2] + t * q2->v[2];
+
     *output = result;
 }
 

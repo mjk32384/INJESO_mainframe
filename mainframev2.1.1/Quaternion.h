@@ -150,7 +150,9 @@ void Quaternion_rotate(Quaternion* q, double v[3], double output[3]);
  *      Interpolation between the two quaternions [0, 1].
  *      0 is equal with q1, 1 is equal with q2, 0.5 is the middle between q1 and q2.
  */
-void Quaternion_slerp(Quaternion* q1, Quaternion* q2, double t, Quaternion* output);
+void Quaternion_slerp(Quaternion * q1, Quaternion * q2, double t, Quaternion * output);
+
+void Quaternion_lerp(Quaternion* q1, Quaternion* q2, double t, Quaternion* output);
 
 void Quaternion_addition(Quaternion* q1, Quaternion* q2, Quaternion* output);
 

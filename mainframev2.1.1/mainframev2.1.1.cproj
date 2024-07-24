@@ -12,9 +12,9 @@
     <OutputFileName>$(MSBuildProjectName)</OutputFileName>
     <OutputFileExtension>.elf</OutputFileExtension>
     <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
-    <AssemblyName>mainframev1.4.5</AssemblyName>
-    <Name>mainframev1.4.5</Name>
-    <RootNamespace>mainframev1.4.5</RootNamespace>
+    <AssemblyName>mainframev2.1.1</AssemblyName>
+    <Name>mainframev2.1.1</Name>
+    <RootNamespace>mainframev2.1.1</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
@@ -123,7 +123,37 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ComplementaryFilter.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ComplementaryFilter.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="i2c.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="i2c.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="main.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="mpu9250_i2c_v2.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="mpu9250_i2c_v2.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Quaternion.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Quaternion.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="UART1.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="UART1.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>

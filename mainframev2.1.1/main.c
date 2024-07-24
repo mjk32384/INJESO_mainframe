@@ -1,12 +1,12 @@
 /*
- * mainframev1.4.5.c
+ * mainframev2.1.1.c
  *
- * Created: 2023-08-22 오후 8:31:35
+ * Created: 2023-09-08 오후 8:27:17
  * Author : 정우진 wj Jeong
  */ 
 //---------------------------------------------------
 // MPU9250 센서의 방향이 다른 점 유의하세요. 
-// quaternion은 q나 -q나 동일한 쿼터니안인데 필터를 한다면 어떻게 필터링해야지?
+
 
 //---------------------------------------------------
 
@@ -33,9 +33,12 @@ float gyrozz = 0;
 float gyrosumxx=0;
 float gyrosumyy=0;
 float gyrosumzz=0;
-float avgxx = 0.02525;
-float avgyy = -0.06337;
-float avgzz = -0.00780;
+//float avgxx = 0.02525;//1번
+//float avgyy = -0.06337;
+//float avgzz = -0.00780;
+float avgxx = -0.01707;//2번
+float avgyy = -0.00570;
+float avgzz = -0.00997;
 float yaw = 0;
 float pitch = 0;
 float roll = 0;
@@ -46,15 +49,18 @@ float thetaz = 0;
 float accelxx = 0;
 float accelyy = 0;
 float accelzz = 0;
-float avgax = 0.67278;
+//float avgax = 0.67278;//1번
+//float avgay = 0.60033;
+//float avgaz = -1.8743;
+float avgax = 0.67278;//2번 보드
 float avgay = 0.60033;
 float avgaz = -1.8743;
 float magxx = 0;
 float magyy = 0;
 float magzz = 0;
-float avgmx = 95;
-float avgmy = 18;
-float avgmz =-100;
+float avgmx = 0;
+float avgmy = 0;
+float avgmz = 0;
 float magsumx =0;
 float magsumy =0;
 float magsumz =0;
@@ -95,6 +101,11 @@ double orient_y[3];
 double orient_z_init[3] = {0, 0, 1};
 double orient_z[3];
 
+uint16_t v0 = 0;
+uint16_t v1 = 0;
+uint16_t v2 = 0;
+int k = 0;
+
 ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 {
 
@@ -119,7 +130,7 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	f_gy_last=f_gy_now;
 	f_gz_last=f_gz_now;
 	
-	//orient notchange	
+	//orient not change	
 	accelxx = acc2_f[0]-avgax;
 	accelyy = acc2_f[1]-avgay;
 	accelzz = acc2_f[2]-avgaz;	
@@ -132,8 +143,8 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	f_az_last=f_az_now;
 	
 	AK8963I2CReadMAGNETO_2(mag);
-	magyy = mag[0]-avgmx;			//orient change2
-	magxx = mag[1]-avgmy;			//orient change2
+	magyy = mag[0]-avgmy;			//orient change2
+	magxx = mag[1]-avgmx;			//orient change2
 	magzz =-(mag[2]-avgmz);
 	orient_temp[0]=magxx;
 	orient_temp[1]=magyy;
@@ -148,92 +159,76 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	Quaternion_set(cos(roll1/2.0), 0, 0, sin(roll1/2.0), &q2);
 	Quaternion_multiply(&q2, &q1, &orientation2);
 	Quaternion_normalize(&orientation2, &orientation2);
-	if(n_enter>=5){
-		UART1_print16b((uint16_t) (orientation.w * 1000));			
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orientation.v[0] * 1000));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orientation.v[1]  * 1000));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orientation.v[2] * 1000));
-		UART1_transmit('\t');		
-		Quaternion_toEulerZYX2(&orientation,eulang);
-		if(eulang[1]<0.1) UART1_print16b(0);
-		else UART1_print16b((uint16_t) (eulang[0] * 180/3.141592));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (eulang[1] * 180/3.141592));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (eulang[2] * 180/3.141592));
-		UART1_transmit('\t');
-		/*UART1_transmit('\t');
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (pitch));		
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q1.w * 1000));		
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q1.v[0] * 1000));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q1.v[1]  * 1000));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q1.v[2] * 1000));
-		UART1_transmit('\t');
-		UART1_transmit('\t');		
-		UART1_print16b((uint16_t) (orient_temp[0]));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orient_temp[1]));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orient_temp[2]));
-		UART1_transmit('\t');		
-		UART1_print16b((uint16_t) (orient_temp2[0]));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orient_temp2[1]));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orient_temp2[2]));
-		UART1_transmit('\t');
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (roll1*57.29));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q2.w * 1000));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q2.v[0] * 1000));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q2.v[1]  * 1000));
-		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q2.v[2] * 1000));*/
-//		UART1_transmit('\t');
+	if(n_enter>=25){
+			
 
+		v0 = f_gz_last * 10000;
+		v1 = orientation.v[1] * 10000;
+		v2 = orientation.v[2] * 10000;
+		
+		
+		if(k<250)
+		{
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orientation2.w * 1000));				
+		UART1_print16b((uint16_t) (orientation.w * 10000));
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orientation2.v[0] * 1000));
+		UART1_print16b((uint16_t) v0);
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orientation2.v[1]  * 1000));
+		UART1_print16b((uint16_t) v1);
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (orientation2.v[2] * 1000));
+		UART1_print16b((uint16_t) v2);
 		UART1_transmit('\t');
+		UART1_transmit('\t');
+		eeprom_write_word( 6*k, v0>>8);
+	    eeprom_write_word( 6*k+1, v0&0xff);
+		eeprom_write_word( 6*k+2, v1>>8);
+		eeprom_write_word( 6*k+3, v1&0xff);
+		eeprom_write_word( 6*k+4, v2>>8);
+		eeprom_write_word( 6*k+5, v2&0xff);
+		k++;
+		}
+	    _delay_ms(10);
 		Quaternion_toEulerZYX2(&orientation2,eulang);
-		if(eulang[1]<0.1) UART1_print16b(0);
-		else UART1_print16b((uint16_t) (eulang[0] * 180/3.141592));
+		
+		
+		UART1_print16b((uint16_t) (f_ax_now*10000));
+ 		UART1_transmit('\t');
+		UART1_print16b((uint16_t) (f_ay_now*10000));
+ 		UART1_transmit('\t');		
+		UART1_print16b((uint16_t) (f_az_now*10000));
+ 		UART1_transmit('\t');		
+		UART1_print16b((uint16_t) magxx);
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (eulang[1] * 180/3.141592));
+		UART1_print16b((uint16_t) magyy);
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (eulang[2] * 180/3.141592));
-		UART1_transmit('\t');		
+		UART1_print16b((uint16_t) magzz);
+		UART1_transmit('\t');	
+		UART1_transmit('\n');			 
+/*
+ 		if(eulang[1]<0.1) UART1_print16b(0);
+ 		else UART1_print16b((uint16_t) (eulang[0] * 180/3.141592));
+ 		UART1_transmit('\t');
+ 		UART1_print16b((uint16_t) (eulang[1] * 180/3.141592));
+ 		UART1_transmit('\t');
+ 		UART1_print16b((uint16_t) (eulang[2] * 180/3.141592));
+ 		UART1_transmit('\t');		
 		UART1_print16b((uint16_t) (yaw));
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (pitch));	
+ 		UART1_print16b((uint16_t) (pitch));	
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (roll));					
+    	UART1_print16b((uint16_t) (roll));					
 		UART1_transmit('\n');
+*/
+		OCR2 += f_gz_now * 100;
+
 		n_enter=0;
-		
-
-
 
 	}
+}
 
-	
-	 
+ISR(TIMER2_OVF_vect) 
+{
+	TCNT2 = 6;
 }
 
 int main(void)
@@ -247,16 +242,15 @@ int main(void)
 	_delay_ms(1000);		
 	
 	TCCR0 = 0x00;
-	//TCCR2 = 0x00;						// 함수 소요시간 계산
 	TCNT0 = 6;//131
-	//TCNT2 = 6;					        // 타이머 초기 값 설정
+	TCNT2 = 6;					        // 타이머 초기 값 설정
 	
-	//TCCR2 = 0x68;				        // 표준모드, 타이머 정지
-	//OCR2 = 250;
-	//DDRB |= (1<<DDB7);// 인터럽트 설정
+	TCCR2 = 0x68;				        // 표준모드, 타이머 정지
+	OCR2 = 00;
+	DDRB |= (1<<DDB7);// 인터럽트 설정
 	TIMSK = (1<<TOIE0); 	// 타이머0 오버플로 인터럽트 허용
 	TCCR0 |= 0x07;
-	//TCCR2 |= 0x03;						//1ms(16000tic) , duty 64
+	TCCR2 |= 0x03;						//1ms(16000tic) , duty 64 ?32
 
     int i = 0;
 	MPU9250I2CReadIMU_f(acc2_f,gyro2_f);
@@ -269,7 +263,7 @@ int main(void)
 	UART1_transmit('\n');
 	_delay_ms(10);
 
-	for( i = 0 ; i<1000 ; i++ )
+	for( i = 0 ; i<100 ; i++ )
 	{
 		
 		MPU9250I2CReadIMU_f(acc2_f,gyro2_f);
@@ -283,12 +277,12 @@ int main(void)
 		_delay_ms(10);
 		
 	}
-    avgxx = avgxx* 0.9 + 0.1* gyrosumxx / 1000.0;
-    avgyy = avgyy* 0.9 + 0.1* gyrosumyy / 1000.0;
+    avgxx = avgxx* 0.5 + 0.5* gyrosumxx / 1000.0;
+    avgyy = avgyy* 0.5 + 0.5* gyrosumyy / 1000.0;
     avgzz = avgzz* 0.7 + 0.3* gyrosumzz / 1000.0 ;
-	magmeanx = magsumx/1000.0; // x and y have to be inversed 
-	magmeany = magsumy/1000.0; //
-	magmeanz = magsumz/1000.0;
+	magmeanx = magsumx/100.0; // x and y have to be inversed 
+	magmeany = magsumy/100.0; //
+	magmeanz = magsumz/100.0;
 	roll0 = atan2(magmeanx,magmeany)*57.295; //so inverse
 	UART1_print16b((int16_t)(avgxx*100000));	
 	UART1_transmit('\t');
@@ -301,20 +295,20 @@ int main(void)
 	UART1_transmit('\t');
 	UART1_transmit('\n');
 	
-	_delay_ms(5000);
+	_delay_ms(1000);
 	Quaternion_setIdentity(&orientation); 
 	sei();							    // 전역 인터럽트 허용
 
 	UART1_transmit('\n');
 	_delay_ms(400);	
 	
-	while(1)
-	{
-		//MPU9250I2CReadIMU_f(acc2_f,gyro2_f);
-		//AK8963I2CReadMAGNETO_2(mag);
-
-		_delay_ms(100);
-	}
+	//for(int j = 0 ; j<25 ; j++){
+		//OCR2 = 10*j + 10;
+		//_delay_ms(1000);
+		//
+	//}
+	OCR2 = 100;
+	_delay_ms(10000);
 }
 
 
