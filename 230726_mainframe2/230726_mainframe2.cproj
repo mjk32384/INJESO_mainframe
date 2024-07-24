@@ -12,9 +12,9 @@
     <OutputFileName>$(MSBuildProjectName)</OutputFileName>
     <OutputFileExtension>.elf</OutputFileExtension>
     <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
-    <AssemblyName>230724_Main IMU sensing code</AssemblyName>
-    <Name>230724_Main IMU sensing code</Name>
-    <RootNamespace>230724_Main IMU sensing code</RootNamespace>
+    <AssemblyName>230726_mainframe2</AssemblyName>
+    <Name>230726_mainframe2</Name>
+    <RootNamespace>230726_mainframe2</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
@@ -132,10 +132,16 @@
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="mpu9250_i2c_v2.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="mpu9250_i2c_v2.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="mpu9250_i2c_v2.c">
+    <Compile Include="Quaternion.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Quaternion.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>

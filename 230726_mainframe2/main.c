@@ -1,10 +1,9 @@
 /*
- * 230724_Main IMU sensing code.c
+ * 230726_mainframe2.c
  *
- * Created: 2023-07-24 오후 9:44:19
+ * Created: 2023-07-27 오후 6:22:50
  * Author : 정우진 wj Jeong
  */ 
-
 
 
 //---------------------------------------------------
@@ -14,6 +13,7 @@
 // MPU9250
 // timer 이용한 제어
 // lpf 와 회전 제어 
+// quaternion 합체 
 
 //---------------------------------------------------
 
@@ -21,9 +21,10 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-
+#include <math.h>
+#include <avr/eeprom.h>
 #include "mpu9250_i2c_v2.h"
-
+#include "Quaternion.h"
 //손수 제작 uart1 코드
 void UART1_init(void);
 void UART1_transmit(char data);
@@ -40,7 +41,7 @@ float gyrosumyy=0;
 float gyrosumzz=0;
 float avgxx = 0.025;
 float avgyy = -0.063;
-float avgzz = 0.008;
+float avgzz = -0.008;
 float thetax = 0;
 float thetay = 0;
 float thetaz = 0;
@@ -69,7 +70,12 @@ float f_az_last =0;
 float f_ax_now =0;
 float f_ay_now =0;
 float f_az_now =0;
+Quaternion orientation;
+Quaternion delta;
+Quaternion omega;
 
+double orient_x_init[3] = {1, 0, 0};
+double orient_x[3];
 
 ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 {
@@ -87,23 +93,7 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	f_gx_last=f_gx_now;
 	f_gy_last=f_gy_now;
 	f_gz_last=f_gz_now;	
-	
-	
-	/*			
-	UART1_print16b((int16_t)(gyroxx*1000));
-	UART1_transmit('\t');
-	UART1_print16b((int16_t)(gyroyy*1000));
-	UART1_transmit('\t');
-	UART1_print16b((int16_t)(gyrozz*1000));
-	UART1_transmit('\t');
-	UART1_transmit('\t');	
-	UART1_print16b((int16_t)(f_gx_now*1000));
-	UART1_transmit('\t');
-	UART1_print16b((int16_t)(f_gy_now*1000));
-	UART1_transmit('\t');
-	UART1_print16b((int16_t)(f_gz_now*1000));
-	UART1_transmit('\n');	*/
-	
+
 	accelxx = acc2_f[0]-avgax;
 	accelyy = acc2_f[1]-avgay;
 	accelzz = acc2_f[2]-avgaz;		
@@ -113,33 +103,38 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	f_ax_last=f_ax_now;
 	f_ay_last=f_ay_now;
 	f_az_last=f_az_now;
+	/*UART1_print16b((uint16_t) (f_gx_now * 1000));
+	UART1_transmit('\t');
+	UART1_print16b((uint16_t) (f_gy_now * 1000));
+	UART1_transmit('\t');
+	UART1_print16b((uint16_t) (f_gz_now * 1000));
+	UART1_transmit('\n');	*/
+	Quaternion_set(0, f_gx_now, f_gy_now, f_gz_now, &omega);
+	Quaternion_multiply(&omega, &orientation, &delta);
+	Quaternion_ratio(&delta, 0.5 * 16 / 1000, &delta);
+	Quaternion_addition(&orientation, &delta, &orientation);
+	Quaternion_normalize(&orientation, &orientation);
 	
+	Quaternion_rotate(&orientation, orient_x_init, orient_x);
+	
+	UART1_print16b((uint16_t) (orient_x[0] * 1000));
+	UART1_transmit('\t');
+	UART1_print16b((uint16_t) (orient_x[1] * 1000));
+	UART1_transmit('\t');
+	UART1_print16b((uint16_t) (orient_x[2] * 1000));
+	UART1_transmit('\n');
+
+	AK8963I2CReadMAGNETO_2(mag);
+
 	if(n_enter>=25){
-		UART1_print16b((int16_t)(f_ax_now*1000));
-		UART1_transmit('\t');
-		UART1_print16b((int16_t)(f_ay_now*1000));
-		UART1_transmit('\t');
-		UART1_print16b((int16_t)(f_az_now*1000));
-		UART1_transmit('\n');	
+
 		n_enter=0;
+
 	}
-//	AK8963I2CReadMAGNETO(mag);
-//	UART1_print16b(mag[0]);
-//	UART1_transmit('\t');
-//	UART1_print16b(mag[1]);
-//	UART1_transmit('\t');
-//	UART1_print16b(mag[2]);
-//	UART1_transmit('\t');
-//	UART1_print16b((int16_t)n_enter2);
-//	UART1_transmit('\n');
+
 	
 	 
 }
-ISR(TIMER2_OVF_vect)
-{
-
-}
-
 
 int main(void)
 {
@@ -151,14 +146,16 @@ int main(void)
 	
 	TCCR0 = 0x00;
 	//TCCR2 = 0x68;				        // 표준모드, 타이머 정지
-	TCCR2 = 0x00;						// 함수 소요시간 계산
+	//TCCR2 = 0x00;						// 함수 소요시간 계산
 	TCNT0 = 6;
-	TCNT2 = 6;					        // 타이머 초기 값 설정
+	//TCNT2 = 6;					        // 타이머 초기 값 설정
 	//OCR2 = 250;
 	
 	//DDRB |= (1<<DDB7);
 	// 인터럽트 설정
-	TIMSK = (1<<TOIE0) || (1<<TOIE2);	// 타이머0,2 오버플로 인터럽트 허용
+	TIMSK = (1<<TOIE0); 	// 타이머0,2 오버플로 인터럽트 허용
+	TCCR0 |= 0x07;
+	//TCCR2 |= 0x03;						//1ms(16000tic) , duty 64
 
     int i = 0;
 
@@ -182,36 +179,36 @@ int main(void)
 	UART1_print16b((int16_t)(avgzz*1000));
 	UART1_transmit('\n');	
 	UART1_transmit('\n');
+	
+	MPU9250I2CReadIMU_f(acc2_f,gyro2_f);
 	AK8963I2CReadMAGNETO(mag);
 	UART1_print16b(mag[0]);
 	UART1_transmit('\t');
 	UART1_print16b(mag[1]);
 	UART1_transmit('\t');
 	UART1_print16b(mag[2]);
-	UART1_transmit('\t');		
-	_delay_ms(250);
-	TCCR0 |= 0x07;
-	TCCR2 |= 0x03;						//1ms(16000tic) , duty 64
+	UART1_transmit('\n');		
+	_delay_ms(10);
+	Quaternion_setIdentity(&orientation); 
 	sei();							    // 전역 인터럽트 허용
 
 	UART1_print16b((int16_t)n_enter);
-	UART1_transmit('\n');	
-	AK8963I2CReadMAGNETO(mag);
-	UART1_print16b(mag[0]);
-	UART1_transmit('\t');
-	UART1_print16b(mag[1]);
-	UART1_transmit('\t');
-	UART1_print16b(mag[2]);
-	UART1_transmit('\t');
-	UART1_print16b((int16_t)n_enter);
-	UART1_transmit('\n');	
-	while(1);
+	UART1_transmit('\n');
+	_delay_ms(400);	
+	
+	while(1)
+	{
+		//MPU9250I2CReadIMU_f(acc2_f,gyro2_f);
+		//AK8963I2CReadMAGNETO_2(mag);
+
+		_delay_ms(100);
+	}
 }
 
 void UART1_init(void)
 {
-	UBRR1H = 0x00;                     //9,600 보율로 설정
-	UBRR1L = 207;
+	UBRR1H = 0x00;                     //
+	UBRR1L = 16;
 	UCSR1A |= _BV(U2X1);               //2배속 모드
 	// 비동기, 8비트 데이터, 패리티 없음, 1비트 정지 비트 모드
 	UCSR1C |= 0x06;

@@ -1,9 +1,8 @@
 ﻿/*
- * mpu9250_i2c_v2.h
+ * mpu9250_i2c.h
  *
  * Created: 2023-06-28 오후 11:02:11
  *  Author: stu11
- * Use	  : mpu9250 + ak8963 master mode code
  */ 
 
 #ifndef __MPU9250_I2C_v2_H__
@@ -150,6 +149,7 @@ int MPU9250I2CReadIMU_f(float acc_f[], float gyro_f[]);
 
 int8_t AK8963I2CWhoAmI(void);
 int AK8963I2CReadMAGNETO(int16_t mag[]);
+int AK8963I2CReadMAGNETO_2(int16_t mag[]);
 int AK8963I2CReadSTATUS(unsigned char status[]);
 
 #endif	

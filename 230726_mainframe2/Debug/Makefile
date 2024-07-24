@@ -39,7 +39,8 @@ SUBDIRS :=
 C_SRCS +=  \
 ../i2c.c \
 ../main.c \
-../mpu9250_i2c_v2.c
+../mpu9250_i2c_v2.c \
+../Quaternion.c
 
 
 PREPROCESSING_SRCS += 
@@ -51,26 +52,30 @@ ASM_SRCS +=
 OBJS +=  \
 i2c.o \
 main.o \
-mpu9250_i2c_v2.o
+mpu9250_i2c_v2.o \
+Quaternion.o
 
 OBJS_AS_ARGS +=  \
 i2c.o \
 main.o \
-mpu9250_i2c_v2.o
+mpu9250_i2c_v2.o \
+Quaternion.o
 
 C_DEPS +=  \
 i2c.d \
 main.d \
-mpu9250_i2c_v2.d
+mpu9250_i2c_v2.d \
+Quaternion.d
 
 C_DEPS_AS_ARGS +=  \
 i2c.d \
 main.d \
-mpu9250_i2c_v2.d
+mpu9250_i2c_v2.d \
+Quaternion.d
 
-OUTPUT_FILE_PATH +=230724_Main\ IMU\ sensing\ code.elf
+OUTPUT_FILE_PATH +=230726_mainframe2.elf
 
-OUTPUT_FILE_PATH_AS_ARGS +="230724_Main IMU sensing code.elf"
+OUTPUT_FILE_PATH_AS_ARGS +=230726_mainframe2.elf
 
 ADDITIONAL_DEPENDENCIES:=
 
@@ -103,6 +108,13 @@ LINKER_SCRIPT_DEP+=
 	@echo Finished building: $<
 	
 
+./Quaternion.o: .././Quaternion.c
+	@echo Building file: $<
+	@echo Invoking: AVR/GNU C Compiler : 5.4.0
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -funsigned-char -funsigned-bitfields -DDEBUG -DF_CPU=16000000  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.6.364\include"  -O1 -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -mrelax -g2 -Wall -mmcu=atmega128a -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.6.364\gcc\dev\atmega128a" -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
 
 
 
@@ -129,13 +141,13 @@ all: $(OUTPUT_FILE_PATH) $(ADDITIONAL_DEPENDENCIES)
 $(OUTPUT_FILE_PATH): $(OBJS) $(USER_OBJS) $(OUTPUT_FILE_DEP) $(LIB_DEP) $(LINKER_SCRIPT_DEP)
 	@echo Building target: $@
 	@echo Invoking: AVR/GNU Linker : 5.4.0
-	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE) -o$(OUTPUT_FILE_PATH_AS_ARGS) $(OBJS_AS_ARGS) $(USER_OBJS) $(LIBS) -Wl,-Map="230724_Main IMU sensing code.map" -Wl,--start-group -Wl,-lm  -Wl,--end-group -Wl,--gc-sections -mrelax -mmcu=atmega128a -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.6.364\gcc\dev\atmega128a"  
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE) -o$(OUTPUT_FILE_PATH_AS_ARGS) $(OBJS_AS_ARGS) $(USER_OBJS) $(LIBS) -Wl,-Map="230726_mainframe2.map" -Wl,--start-group -Wl,-lm  -Wl,--end-group -Wl,--gc-sections -mrelax -mmcu=atmega128a -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.6.364\gcc\dev\atmega128a"  
 	@echo Finished building target: $@
-	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "230724_Main IMU sensing code.elf" "230724_Main IMU sensing code.hex"
-	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "230724_Main IMU sensing code.elf" "230724_Main IMU sensing code.eep" || exit 0
-	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objdump.exe" -h -S "230724_Main IMU sensing code.elf" > "230724_Main IMU sensing code.lss"
-	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "230724_Main IMU sensing code.elf" "230724_Main IMU sensing code.srec"
-	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-size.exe" "230724_Main IMU sensing code.elf"
+	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "230726_mainframe2.elf" "230726_mainframe2.hex"
+	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "230726_mainframe2.elf" "230726_mainframe2.eep" || exit 0
+	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objdump.exe" -h -S "230726_mainframe2.elf" > "230726_mainframe2.lss"
+	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "230726_mainframe2.elf" "230726_mainframe2.srec"
+	"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-size.exe" "230726_mainframe2.elf"
 	
 	
 
@@ -147,5 +159,5 @@ $(OUTPUT_FILE_PATH): $(OBJS) $(USER_OBJS) $(OUTPUT_FILE_DEP) $(LIB_DEP) $(LINKER
 clean:
 	-$(RM) $(OBJS_AS_ARGS) $(EXECUTABLES)  
 	-$(RM) $(C_DEPS_AS_ARGS)   
-	rm -rf "230724_Main IMU sensing code.elf" "230724_Main IMU sensing code.a" "230724_Main IMU sensing code.hex" "230724_Main IMU sensing code.lss" "230724_Main IMU sensing code.eep" "230724_Main IMU sensing code.map" "230724_Main IMU sensing code.srec" "230724_Main IMU sensing code.usersignatures"
+	rm -rf "230726_mainframe2.elf" "230726_mainframe2.a" "230726_mainframe2.hex" "230726_mainframe2.lss" "230726_mainframe2.eep" "230726_mainframe2.map" "230726_mainframe2.srec" "230726_mainframe2.usersignatures"
 	
