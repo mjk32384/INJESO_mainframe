@@ -1,17 +1,13 @@
 /*
- * mainframev1.4.3.c
+ * mainframev1.4.5.c
  *
- * Created: 2023-08-09 오후 10:28:42
-
+ * Created: 2023-08-22 오후 8:31:35
  * Author : 정우진 wj Jeong
  */ 
 //---------------------------------------------------
-// MPU9250
-// 센서의 방향이 다른 점 유의하세요. 
-// lpf 와 회전 제어 
-// quaternion 표시와
-// 가속도 자기장을 이용한 각도 출력
-// 위의 가속도, 지자기를 이용한 고정적인 
+// MPU9250 센서의 방향이 다른 점 유의하세요. 
+// quaternion은 q나 -q나 동일한 쿼터니안인데 필터를 한다면 어떻게 필터링해야지?
+
 //---------------------------------------------------
 
 
@@ -143,24 +139,33 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 	orient_temp[1]=magyy;
 	orient_temp[2]=magzz;
 	yaw=atan2(-f_ax_now,+f_ay_now)*57.296 + eulang[2]*57.295;
-	pitch=asin(sqrt((f_ax_now*f_ax_now+f_ay_now*f_ay_now))/10)*57.295;
+	pitch=atan2(sqrt(f_ax_now*f_ax_now+f_ay_now*f_ay_now),f_az_now)*57.295;
 	roll= roll0 - (atan2(magyy,magxx)* 57.295);
 	
 	Quaternion_set(cos(pitch/2.0/57.295), sin(pitch/2.0/57.295)*cos(atan2(-f_ax_now,+f_ay_now)), sin(pitch/2.0/57.295)*sin(atan2(-f_ax_now,+f_ay_now)), 0, &q1);
 	Quaternion_rotate(&q1, orient_temp, orient_temp2);
-	roll1=roll0/57.295 - atan2(orient_temp2[1],orient_temp2[0]);
+	roll1=roll0/57.295 - atan2(orient_temp2[1],orient_temp2[0]);//개선 필요. ss-cc/cs+sc
 	Quaternion_set(cos(roll1/2.0), 0, 0, sin(roll1/2.0), &q2);
 	Quaternion_multiply(&q2, &q1, &orientation2);
-	
-	if(n_enter>=25){
+	Quaternion_normalize(&orientation2, &orientation2);
+	if(n_enter>=5){
+		UART1_print16b((uint16_t) (orientation.w * 1000));			
+		UART1_transmit('\t');
 		UART1_print16b((uint16_t) (orientation.v[0] * 1000));
 		UART1_transmit('\t');
 		UART1_print16b((uint16_t) (orientation.v[1]  * 1000));
 		UART1_transmit('\t');
 		UART1_print16b((uint16_t) (orientation.v[2] * 1000));
 		UART1_transmit('\t');		
-
+		Quaternion_toEulerZYX2(&orientation,eulang);
+		if(eulang[1]<0.1) UART1_print16b(0);
+		else UART1_print16b((uint16_t) (eulang[0] * 180/3.141592));
 		UART1_transmit('\t');
+		UART1_print16b((uint16_t) (eulang[1] * 180/3.141592));
+		UART1_transmit('\t');
+		UART1_print16b((uint16_t) (eulang[2] * 180/3.141592));
+		UART1_transmit('\t');
+		/*UART1_transmit('\t');
 		UART1_transmit('\t');
 		UART1_print16b((uint16_t) (pitch));		
 		UART1_transmit('\t');
@@ -194,10 +199,11 @@ ISR(TIMER0_OVF_vect) 				// 타이머0 오버플로 인터럽트 서비스루틴
 		UART1_transmit('\t');
 		UART1_print16b((uint16_t) (q2.v[1]  * 1000));
 		UART1_transmit('\t');
-		UART1_print16b((uint16_t) (q2.v[2] * 1000));
-		UART1_transmit('\t');
+		UART1_print16b((uint16_t) (q2.v[2] * 1000));*/
+//		UART1_transmit('\t');
 
-				
+		UART1_transmit('\t');
+		UART1_print16b((uint16_t) (orientation2.w * 1000));				
 		UART1_transmit('\t');
 		UART1_print16b((uint16_t) (orientation2.v[0] * 1000));
 		UART1_transmit('\t');
@@ -235,7 +241,9 @@ int main(void)
 
 	_delay_ms(1000);
 	UART1_init();
-	MPU9250I2CInit(400000);		
+//	UART1_transmit('A');
+	MPU9250I2CInit(400000);
+			
 	_delay_ms(1000);		
 	
 	TCCR0 = 0x00;
@@ -261,7 +269,7 @@ int main(void)
 	UART1_transmit('\n');
 	_delay_ms(10);
 
-	for( i = 0 ; i<2000 ; i++ )
+	for( i = 0 ; i<1000 ; i++ )
 	{
 		
 		MPU9250I2CReadIMU_f(acc2_f,gyro2_f);
@@ -275,12 +283,12 @@ int main(void)
 		_delay_ms(10);
 		
 	}
-    avgxx = avgxx* 0.9 + 0.1* gyrosumxx / 2000.0;
-    avgyy = avgyy* 0.9 + 0.1* gyrosumyy / 2000.0;
-    avgzz = avgzz* 0.7 + 0.3* gyrosumzz / 2000.0 ;
-	magmeanx = magsumx/2000.0; // x and y have to be inversed 
-	magmeany = magsumy/2000.0; //
-	magmeanz = magsumz/2000.0;
+    avgxx = avgxx* 0.9 + 0.1* gyrosumxx / 1000.0;
+    avgyy = avgyy* 0.9 + 0.1* gyrosumyy / 1000.0;
+    avgzz = avgzz* 0.7 + 0.3* gyrosumzz / 1000.0 ;
+	magmeanx = magsumx/1000.0; // x and y have to be inversed 
+	magmeany = magsumy/1000.0; //
+	magmeanz = magsumz/1000.0;
 	roll0 = atan2(magmeanx,magmeany)*57.295; //so inverse
 	UART1_print16b((int16_t)(avgxx*100000));	
 	UART1_transmit('\t');
@@ -308,4 +316,5 @@ int main(void)
 		_delay_ms(100);
 	}
 }
+
 
