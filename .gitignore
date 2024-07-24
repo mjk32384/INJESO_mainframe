@@ -4,5 +4,6 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.atsuo
 
 .vs/
